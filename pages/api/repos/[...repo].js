@@ -33,23 +33,6 @@ export async function addRepo(query, req, res) {
   const [repoUser, repoName] = query.repo;
   let repoFullName = `${repoUser}/${repoName}`;
 
-<<<<<<< HEAD
-  var userData = await verifyCookie(res);
-
-  if (!query.repo[0] || !query.repo[1]) return sendStatus(res, 'InvalidRepoName');
-  if (!repoName.match(/^.+\/.+$/gm)) return sendStatus(res, 'InvalidRepoName');
-  if (!userData.hasAuth) return sendStatus(res, 'Unauthorized');
-
-  await fetch('https://api.github.com/repos/' + repoName)
-    .then(res => res.json())
-    .then(async body => {
-      if (body.message == 'Not Found') return sendStatus(res, 'InvalidRepoName');
-      if (body.archived) return sendStatus(res, 'RepoIsArchived');
-      if (body.fork) return sendStatus(res, 'RepoIsFork');
-      // if (body.open_issues_count < 5) return sendStatus(res, 'RepoIsUnder5Issues');
-      const docRef = db.collection('repos').doc(`${body.id}`);
-      const doc = await docRef.get();
-=======
   let userData = await verifyCookie(req);
   if (!repoUser || !repoName) return sendStatus(res, 'InvalidRepoName');
   if (!repoFullName.match(/^.+\/.+$/gm)) return sendStatus(res, 'InvalidRepoName');
@@ -76,7 +59,6 @@ export async function addRepo(query, req, res) {
   const {
     login: github_owner
   } = githubResponse.owner;
->>>>>>> next
 
   if (message == 'Not Found') return sendStatus(res, 'InvalidRepoName');
   if (archived) return sendStatus(res, 'RepoIsArchived');
@@ -104,24 +86,22 @@ export async function addRepo(query, req, res) {
     id,
     language,
   };
-
   await docRef.set(repoData);
-  await userRef.set(
-    {
-      activity: [
-        {
-          type: 'add',
-          repo: {
-            id: githubResponse.id,
-            full_name: githubResponse.full_name,
-            name: githubResponse.name,
-            active: true,
-          },
+
+  let userData = {
+    activity: [
+      {
+        type: 'add',
+        repo: {
+          active: true,
+          id,
+          full_name,
+          name,
         },
-        ...userDoc.data().activity,
-      ],
-    },
-    { merge: true }
-  );
+      },
+      ...userDoc.data().activity,
+    ]
+  };
+  await userRef.set(userData, { merge: true });
   sendStatus(res, 'Success');
 }
